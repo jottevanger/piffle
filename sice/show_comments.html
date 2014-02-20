@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<!--script src="../js/jquery-1.4.2.js" language="JavaScript" /--> 
+<script src="http://code.jquery.com/jquery-1.11.0.js"></script>
+<script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+<script src="jquery.isotope.min.js"></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />
+<script language="JavaScript">
+function _getComments(){
+	var username = $('#uname').val();
+	var ct = $('#ct').val();
+	$url = "../jsonproxy.php?url=";
+	$url  = $url+encodeURIComponent("http://ugc.iwm.org.uk/ugc/api/comments?count="+ct+"&nickname="+username+"&visible=true");
+	$.get( $url ,_showComments,"json");
+}
+function _showComments(data){
+	$("#comments").html("");
+	$("#comments").append("<h2>Total results: "+data.contents.total+"</h2>");
+//	$("#comments").append("<p>Query: "+data.contents.total+"</h2>");
+	$.each(data.contents.hits,function(index,value){
+			$("#comments").append("<li>"+value.commentId+": <a target=\"_blank\" href=\"http://www.iwm.org.uk/collections/item/"+value.itemId.replace("-","/")+"\">"+value.text+"</a></li>");
+		}
+	);
+}
+function _getUserCollections(showItems){
+	var username = $('#uname').val();
+	var ct = $('#ct').val();
+	$url = "../jsonproxy.php?url=";
+	$url  = $url+encodeURIComponent("http://ugc.iwm.org.uk/ugc/api/collections?count="+ct+"&nickname="+username+"&visible=true");
+	$.get( $url,null, function(data){
+		$("#collections").html("");
+//		_isotopeIt()
+		$.each(data.contents.hits,function(index,value){
+				$("#collections").append("<h2>"+value.collectionId+": <a target=\"_blank\" href=\"http://www.iwm.org.uk/myiwm/set/"+value.collectionId+"\">"+value.text+" ("+value.itemCount+" items)</a></h2>");
+				if(showItems){
+					_getACollection(value.collectionId);
+				}
+			}
+		);
+	},"json");
+//	$('#collections').isotope( 'reLayout', null)
+}
+
+function _getACollection(id){
+	var ct = $('#ct').val();
+	$url = "../jsonproxy.php?url=";
+	$url  = $url+encodeURIComponent("http://ugc.iwm.org.uk/ugc/api/collections/"+id+"?count="+ct);
+	$.get( $url , _showCollection,"json");
+}
+
+function _showCollection(data){
+	$.each(data.contents.hits,function(index,value){
+			$("#collections").append("<div id=\""+value.itemId+"-comment\" class=\"item\">"+value.annotation+"</div>");
+		}
+	);
+	_getCollectionSolrData(data.contents.query);
+}
+
+function _getCollectionSolrData(q){
+	var ct = $('#ct').val();
+	$url = "../jsonproxy.php?url=";
+	$url  = $url+encodeURIComponent("http://data.iwm.org.uk/data/collections/?q="+q+"+AND+mediaType:image&wt=json&count="+ct);
+	$.get( $url , _showCollectionSolrData, "json");
+}
+
+function _showCollectionSolrData(data){
+	$.each(data.contents.response.docs,function(index,value){
+			$("#"+value.identifier+"-comment").append("<br /><a target=\"_blank\" href=\"http://www.iwm.org.uk/collections/item/"+value.identifier.replace("-","/")+"\">"+value.summaryTitle+"</a><br /><a target=\"_blank\" href=\"http://www.iwm.org.uk/collections/item/"+value.identifier.replace("-","/")+"\"><img src=\"http://media.iwm.org.uk/iwm/mediaLib"+value.previewMediaLocation[0]+"\"/>");
+		}
+	);
+//	_isotopeIt()
+}
+
+function _isotopeIt(){
+	$('#collections').isotope({
+	  // options
+	  itemSelector : '.item',
+	  layoutMode : 'fitRows'
+	});
+}
+
+</script>
+<script> 
+$(function() {	
+   $("#suggestions").autocomplete({
+      source: function(request, response) {
+         $.ajax({
+            url: "http://www.heritagedata.org/live/services/getConceptLabelMatch", 
+            cache: true,
+            dataType: "jsonp",
+            data: {            
+               schemeURI: "http://purl.org/heritagedata/schemes/eh_period",
+               contains: request.term,  
+               limit: 5
+            },          
+            success: function(data) {
+               response($.map(data, function(item) {              
+                  return { label: item.label.toUpperCase(), value: item.uri }           
+               }));
+            }
+         });
+      },      
+      minLength: 3,
+      select: function(event, ui) { 
+         if(ui.item) {
+            $("<div>").html("<a href='" + ui.item.value + "'>" + ui.item.label + "</a>").prependTo("#selected");
+            $(this).val(ui.item.label);					
+         }
+         else $(this).val("");
+         return false;
+      }  		
+   });  
+});  
+</script> 
+<style>
+.item{
+	width:auto;
+	height:auto;
+	border:dashed black 1px;
+	margin:10px;
+}
+	
+
+/**** Isotope Filtering ****/
+
+.isotope-item {
+  z-index: 2;
+}
+
+.isotope-hidden.isotope-item {
+  pointer-events: none;
+  z-index: 1;
+}
+
+/**** Isotope CSS3 transitions ****/
+
+.isotope,
+.isotope .isotope-item {
+  -webkit-transition-duration: 0.8s;
+     -moz-transition-duration: 0.8s;
+      -ms-transition-duration: 0.8s;
+       -o-transition-duration: 0.8s;
+          transition-duration: 0.8s;
+}
+
+.isotope {
+  -webkit-transition-property: height, width;
+     -moz-transition-property: height, width;
+      -ms-transition-property: height, width;
+       -o-transition-property: height, width;
+          transition-property: height, width;
+}
+
+.isotope .isotope-item {
+  -webkit-transition-property: -webkit-transform, opacity;
+     -moz-transition-property:    -moz-transform, opacity;
+      -ms-transition-property:     -ms-transform, opacity;
+       -o-transition-property:      -o-transform, opacity;
+          transition-property:         transform, opacity;
+}
+
+/**** disabling Isotope CSS3 transitions ****/
+
+.isotope.no-transition,
+.isotope.no-transition .isotope-item,
+.isotope .isotope-item.no-transition {
+  -webkit-transition-duration: 0s;
+     -moz-transition-duration: 0s;
+      -ms-transition-duration: 0s;
+       -o-transition-duration: 0s;
+          transition-duration: 0s;
+}
+
+.container{
+	max-width:90%;
+}
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Get all the shit</title>
+</head>
+<body>
+<p>load someone's shit</p>
+<label> Username:</label> <input type="text" id="uname" value="@Iwm/jeremyo"/><br>
+<label> How many:</label> <input type="text" id="ct" value="50"/><br>
+<input type="button" name="collections" value="collections" onclick="javascript:_getUserCollections(true);return false;" /><br>
+<input type="button" name="comments" value="comments" onclick="javascript:_getComments();return false;" /><br>
+
+<!--input type="button" name="solr_data" value="solr data" onclick="javascript:_getCollectionSolrData('identifier:(object-20366 OR object-20363 OR object-205199551 OR object-205199545 OR object-14728 OR object-205019003 OR object-36788 OR object-30100413 OR object-205186897 OR object-205251777 OR object-205216213 OR object-205244370 OR object-205087878 OR object-205025852 OR object-205022107 OR object-205194952 OR object-205081951 OR object-205191881 OR object-205196445 OR object-205078181 OR object-205072190 OR object-205195300 OR object-205023943 OR object-205022151 OR object-205193305 OR object-205022228 OR object-205299504 OR object-205260356 OR object-205215732 OR object-3081)');return false;" /-->
+<input type="button" value="isotope it!" onclick="javascript:_isotopeIt(true);" />
+<!--<div style="width:80%;border:solid gray 1px">
+</div>
+<div style="width:80%;border:solid gray 1px">
+</div>-->
+<div id="comments" class="container"></div>
+<div id="collections" class="container"></div>
+<br style="clear:both"/>
+<input type="text" id="output"/>
+</body>
+</html>
